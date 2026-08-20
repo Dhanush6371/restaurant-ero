@@ -15,10 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { inventoryItems as initialItems } from '@/lib/mock-data';
 import type { InventoryItem } from '@/types';
-import {
-  Package, AlertTriangle, XCircle, Trash2, Search, Plus, Minus,
-  History, ArrowRightLeft,
-} from 'lucide-react';
+import { Package, TriangleAlert as AlertTriangle, Circle as XCircle, Trash2, Search, Plus, Minus, History, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function InventoryPage() {

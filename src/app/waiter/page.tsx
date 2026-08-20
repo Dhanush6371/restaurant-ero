@@ -16,12 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  ArrowLeft, Plus, Minus, Send, Receipt, Users, Euro, Clock,
-  UserPlus, ArrowRightLeft, Bell, StickyNote, Search, X,
-  CheckCircle2, ChefHat, CreditCard, Wallet, Banknote, Smartphone,
-  Split, Trash2, Flame, Salad, Cake, Wine, AlertCircle, Lock,
-} from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Send, Receipt, Users, Euro, Clock, UserPlus, ArrowRightLeft, Bell, StickyNote, Search, X, CircleCheck as CheckCircle2, ChefHat, CreditCard, Wallet, Banknote, Smartphone, Split, Trash2, Flame, Salad, Cake, Wine, CircleAlert as AlertCircle, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 

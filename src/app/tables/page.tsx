@@ -20,10 +20,7 @@ import {
 } from '@/components/ui/select';
 import { restaurantTables } from '@/lib/mock-data';
 import type { RestaurantTable, TableZone } from '@/types';
-import {
-  Armchair, Users, Clock, Euro, Plus, ArrowRightLeft, Split as SplitIcon,
-  Printer, CheckCircle, X, User,
-} from 'lucide-react';
+import { Armchair, Users, Clock, Euro, Plus, ArrowRightLeft, Split as SplitIcon, Printer, CircleCheck as CheckCircle, X, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 

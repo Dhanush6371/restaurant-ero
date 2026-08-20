@@ -19,9 +19,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { menuItems, modifiers } from '@/lib/mock-data';
 import type { MenuItem, MenuCategory } from '@/types';
-import {
-  Plus, Search, Edit, Copy, Archive, Pencil, Tag, AlertTriangle,
-} from 'lucide-react';
+import { Plus, Search, CreditCard as Edit, Copy, Archive, Pencil, Tag, TriangleAlert as AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const categories: MenuCategory[] = ['Entrées', 'Plats', 'Desserts', 'Fromage', 'Wine', 'Drinks', 'Cocktails', 'Specials'];

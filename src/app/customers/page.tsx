@@ -17,10 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { customers as initialCustomers, reservations, orders } from '@/lib/mock-data';
 import type { Customer } from '@/types';
-import {
-  Users, Repeat, Crown, Euro, Star, Search, Plus, Phone, Mail,
-  Heart, Wine, AlertCircle, Cake, StickyNote, ArrowLeft,
-} from 'lucide-react';
+import { Users, Repeat, Crown, Euro, Star, Search, Plus, Phone, Mail, Heart, Wine, CircleAlert as AlertCircle, Cake, StickyNote, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const loyaltyColors: Record<string, string> = {

@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { Video as LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface KPICardProps {
   label: string;
