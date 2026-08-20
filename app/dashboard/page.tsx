@@ -7,7 +7,6 @@ import { KPICard } from '@/components/shared/kpi-card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -18,13 +17,14 @@ import {
 } from 'lucide-react';
 import {
   hourlySales, salesByDay, revenueBreakdown, topDishes,
-  restaurantTables, kitchenOrders, orders,
 } from '@/lib/mock-data';
 import { useAuth } from '@/lib/auth-context';
+import { useRestaurant } from '@/lib/restaurant-context';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { tables, kitchenOrders, orders, salesToday, ordersToday, guestsToday, serviceMode } = useRestaurant();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,17 +42,17 @@ export default function DashboardPage() {
   })();
 
   const tableStatusCounts = {
-    Occupied: restaurantTables.filter(t => t.status === 'Occupied').length,
-    Available: restaurantTables.filter(t => t.status === 'Available').length,
-    Reserved: restaurantTables.filter(t => t.status === 'Reserved').length,
-    Cleaning: restaurantTables.filter(t => t.status === 'Cleaning').length,
+    Occupied: tables.filter(t => t.status === 'Occupied' || t.status === 'Order Sent' || t.status === 'Preparing').length,
+    Available: tables.filter(t => t.status === 'Available').length,
+    Reserved: tables.filter(t => t.status === 'Reserved').length,
+    Cleaning: tables.filter(t => t.status === 'Cleaning' || t.status === 'Bill Requested' || t.status === 'Payment Due').length,
   };
 
   const kitchenStatusCounts = {
     New: kitchenOrders.filter(o => o.status === 'New').length,
     Preparing: kitchenOrders.filter(o => o.status === 'Preparing').length,
     Ready: kitchenOrders.filter(o => o.status === 'Ready').length,
-    Delayed: kitchenOrders.filter(o => o.status === 'Delayed').length,
+    Delayed: kitchenOrders.filter(o => o.status === 'Delayed' || (o.status === 'Preparing' && o.elapsedMin > 30)).length,
   };
 
   const recentOrders = orders.slice(0, 8);
@@ -60,21 +60,31 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Greeting */}
-      <div>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">
-          {greeting}, {user?.name?.split(' ')[0]} 👋
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">Maison Étoile is open.</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">
+            {greeting}, {user?.name?.split(' ')[0]} 👋
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Maison Étoile is open · {serviceMode} · {user?.role}
+          </p>
+        </div>
+        {user?.shift && (
+          <div className="rounded-lg border border-border/60 px-4 py-2 text-sm">
+            <p className="text-xs text-muted-foreground">Your Shift</p>
+            <p className="font-semibold">{user.shift} · {user.section}</p>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KPICard label="Today's Sales" value="€8,742.50" icon={Euro} trend={{ value: '+12.3%', up: true }} />
-        <KPICard label="Orders" value="186" icon={ShoppingBag} trend={{ value: '+8.1%', up: true }} />
-        <KPICard label="Average Order" value="€47.00" icon={TrendingUp} trend={{ value: '+3.2%', up: true }} />
-        <KPICard label="Guests Served" value="312" icon={Users} trend={{ value: '+15%', up: true }} />
+        <KPICard label="Today's Sales" value={`€${salesToday.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} icon={Euro} trend={{ value: '+12.3%', up: true }} />
+        <KPICard label="Orders" value={String(ordersToday)} icon={ShoppingBag} trend={{ value: '+8.1%', up: true }} />
+        <KPICard label="Average Order" value={`€${ordersToday > 0 ? (salesToday / ordersToday).toFixed(2) : '0'}`} icon={TrendingUp} trend={{ value: '+3.2%', up: true }} />
+        <KPICard label="Guests Served" value={String(guestsToday)} icon={Users} trend={{ value: '+15%', up: true }} />
         <KPICard label="Food Cost" value="28.4%" icon={Percent} trend={{ value: '-1.2%', up: true }} />
-        <KPICard label="Net Revenue" value="€7,421" icon={Wallet} trend={{ value: '+10.8%', up: true }} />
+        <KPICard label="Net Revenue" value={`€${(salesToday * 0.85).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon={Wallet} trend={{ value: '+10.8%', up: true }} />
       </div>
 
       {/* Charts row 1 */}

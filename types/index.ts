@@ -1,18 +1,53 @@
-export type UserRole = 'Admin' | 'Manager' | 'Chef' | 'Waiter';
+export type UserRole = 'Admin' | 'Manager' | 'Chef' | 'Waiter' | 'Cashier';
+
+export type Permission =
+  | 'POS_VIEW' | 'POS_CREATE_ORDER' | 'POS_EDIT_ORDER' | 'POS_VOID_ORDER' | 'POS_REFUND'
+  | 'TABLE_VIEW' | 'TABLE_EDIT' | 'TABLE_MERGE' | 'TABLE_SPLIT'
+  | 'RESERVATION_VIEW' | 'RESERVATION_CREATE' | 'RESERVATION_EDIT'
+  | 'MENU_VIEW' | 'MENU_EDIT'
+  | 'INVENTORY_VIEW' | 'INVENTORY_ADJUST'
+  | 'PURCHASING_VIEW' | 'PURCHASING_CREATE'
+  | 'RECIPE_VIEW' | 'RECIPE_EDIT'
+  | 'CUSTOMER_VIEW' | 'CUSTOMER_EDIT'
+  | 'STAFF_VIEW' | 'STAFF_EDIT'
+  | 'PAYMENT_VIEW' | 'PAYMENT_PROCESS' | 'PAYMENT_REFUND'
+  | 'REPORT_VIEW'
+  | 'ACCOUNTING_VIEW'
+  | 'SETTINGS_VIEW'
+  | 'USER_MANAGEMENT'
+  | 'KDS_VIEW' | 'KDS_MANAGE'
+  | 'WAITER_ORDER';
 
 export interface User {
   id: string;
+  employeeId: string;
   name: string;
   email: string;
   role: UserRole;
+  department: string;
+  phone: string;
   avatar?: string;
+  shift?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
+  section?: string;
+  assignedTables?: number[];
+  status: 'Active' | 'Inactive';
+  lastLogin?: string;
+  permissions: Permission[];
 }
 
 export interface DemoUser extends User {
   password: string;
 }
 
-export type TableStatus = 'Available' | 'Occupied' | 'Reserved' | 'Cleaning' | 'Payment Due';
+export type CourseType = 'Aperitif' | 'Starter' | 'Main' | 'Dessert' | 'Digestif';
+export type CourseStatus = 'Draft' | 'Held' | 'Fired' | 'Preparing' | 'Ready' | 'Served';
+
+export type TableStatus =
+  | 'Available' | 'Reserved' | 'Seated' | 'Occupied'
+  | 'Order Sent' | 'Preparing' | 'Food Ready'
+  | 'Bill Requested' | 'Payment Due' | 'Cleaning';
 export type TableZone = 'Main Dining' | 'Terrace' | 'Bar' | 'Private Dining';
 
 export interface RestaurantTable {
@@ -26,6 +61,8 @@ export interface RestaurantTable {
   amount?: number;
   reservation?: string;
   elapsedMin?: number;
+  customerId?: string;
+  seatedAt?: string;
 }
 
 export type ReservationStatus = 'Confirmed' | 'Seated' | 'Completed' | 'Cancelled' | 'No-show';
@@ -44,24 +81,42 @@ export interface Reservation {
   status: ReservationStatus;
 }
 
-export type OrderStatus = 'New' | 'Preparing' | 'Ready' | 'Served' | 'Delayed' | 'Cancelled';
+export interface WaitlistEntry {
+  id: string;
+  name: string;
+  phone: string;
+  guests: number;
+  estimatedWait: number;
+  seatingPreference: string;
+  status: 'Waiting' | 'Seated';
+  createdAt: string;
+}
+
+export type OrderStatus =
+  | 'Draft' | 'Open' | 'New' | 'Sent to Kitchen' | 'Preparing'
+  | 'Ready' | 'Served' | 'Bill Requested' | 'Paid' | 'Completed'
+  | 'Cancelled' | 'Delayed';
 export type OrderChannel = 'Dine-in' | 'Takeaway' | 'Delivery';
 export type KitchenStation = 'Hot Kitchen' | 'Grill' | 'Garde Manger' | 'Pastry' | 'Bar';
 export type Priority = 'Normal' | 'High' | 'VIP';
 
 export interface OrderItem {
+  id?: string;
   name: string;
   quantity: number;
   price: number;
   modifiers?: string[];
   notes?: string;
   station?: KitchenStation;
+  course?: CourseType;
+  status?: CourseStatus;
 }
 
 export interface Order {
   id: string;
   table?: number;
   waiter?: string;
+  waiterId?: string;
   guests?: number;
   items: OrderItem[];
   status: OrderStatus;
@@ -71,6 +126,9 @@ export interface Order {
   amount: number;
   createdAt: string;
   elapsedMin: number;
+  customerId?: string;
+  notes?: string;
+  courses?: { type: CourseType; status: CourseStatus; items: OrderItem[] }[];
 }
 
 export type MenuCategory = 'Entrées' | 'Plats' | 'Desserts' | 'Fromage' | 'Wine' | 'Drinks' | 'Cocktails' | 'Specials';
@@ -176,7 +234,7 @@ export interface Customer {
   notes?: string;
 }
 
-export type PaymentMethod = 'Cash' | 'Visa' | 'Mastercard' | 'Amex' | 'Apple Pay' | 'Google Pay' | 'Online';
+export type PaymentMethod = 'Cash' | 'Card' | 'Visa' | 'Mastercard' | 'Amex' | 'Apple Pay' | 'Google Pay' | 'Online' | 'Split';
 export type PaymentStatus = 'Completed' | 'Pending' | 'Failed' | 'Refunded';
 
 export interface Payment {
@@ -189,6 +247,7 @@ export interface Payment {
   tip: number;
   status: PaymentStatus;
   time: string;
+  waiter?: string;
 }
 
 export type DeliveryStatus = 'New' | 'Confirmed' | 'Preparing' | 'Ready' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
@@ -233,12 +292,21 @@ export interface Shift {
 
 export interface Notification {
   id: string;
-  type: 'low_stock' | 'reservation' | 'kitchen' | 'payment' | 'system';
+  type: 'low_stock' | 'reservation' | 'kitchen' | 'payment' | 'system' | 'waiter';
   title: string;
   message: string;
   time: string;
   read: boolean;
   link: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user: string;
+  action: string;
+  module: string;
+  time: string;
+  details?: string;
 }
 
 export interface SalesRecord {
@@ -274,3 +342,5 @@ export interface Invoice {
   amount: number;
   status: 'Paid' | 'Pending' | 'Overdue';
 }
+
+export type ServiceMode = 'Lunch Service' | 'Dinner Service' | 'Closed' | 'Opening' | 'Closing';

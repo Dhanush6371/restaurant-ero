@@ -10,12 +10,10 @@ import { PageHeader } from '@/components/shared/page-header';
 import {
   Tabs, TabsList, TabsTrigger,
 } from '@/components/ui/tabs';
-import { kitchenOrders as initialOrders } from '@/lib/mock-data';
-import type { Order, OrderStatus, KitchenStation, Priority } from '@/types';
-import {
-  Clock, AlertTriangle, CheckCircle2, ChefHat, Flame, Salad, Cake,
-  Wine, Play, CheckCheck, X, RotateCcw, Users,
-} from 'lucide-react';
+import { useRestaurant } from '@/lib/restaurant-context';
+import { useAuth } from '@/lib/auth-context';
+import type { OrderStatus, KitchenStation, Priority, Order } from '@/types';
+import { Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, ChefHat, Flame, Salad, Cake, Wine, Play, CheckCheck, X, RotateCcw, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -41,46 +39,55 @@ const priorityColors: Record<Priority, string> = {
 };
 
 export default function KitchenPage() {
-  const [orders, setOrders] = useState(initialOrders);
+  const { kitchenOrders, updateKitchenOrderStatus, addNotification, addAuditLog } = useRestaurant();
+  const { user } = useAuth();
   const [stationFilter, setStationFilter] = useState<string>('all');
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setOrders((prev) => prev.map((o) => {
-        if (o.status === 'New' || o.status === 'Preparing') {
-          return { ...o, elapsedMin: o.elapsedMin + 1 };
-        }
-        return o;
-      }));
+      // Timer ticks are visual only — we don't mutate shared state every minute
     }, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const moveOrder = (id: string, newStatus: OrderStatus) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)));
+    updateKitchenOrderStatus(id, newStatus);
     toast.success(`Order #${id} moved to ${newStatus}`);
+
+    if (newStatus === 'Ready') {
+      const order = kitchenOrders.find(o => o.id === id);
+      addNotification({
+        id: '', type: 'waiter', title: 'Kitchen Ready',
+        message: `Table ${order?.table} order is ready.`,
+        time: 'Just now', read: false, link: '/waiter',
+      });
+    }
+    if (newStatus === 'Served') {
+      addNotification({
+        id: '', type: 'kitchen', title: 'Kitchen',
+        message: `Order #${id} has been served.`,
+        time: 'Just now', read: false, link: '/kitchen',
+      });
+    }
+    addAuditLog({ user: user?.name || 'Unknown', action: `Moved order #${id} to ${newStatus}`, module: 'Kitchen' });
   };
 
   const bumpOrder = (id: string) => {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
+    updateKitchenOrderStatus(id, 'Served');
     toast.success(`Order #${id} bumped`);
+    addAuditLog({ user: user?.name || 'Unknown', action: `Bumped order #${id}`, module: 'Kitchen' });
   };
 
-  const recallOrder = () => {
-    toast.info('Recalling last bumped order…');
-  };
-
-  const filteredOrders = stationFilter === 'all' ? orders : orders.filter((o) => o.station === stationFilter);
+  const filteredOrders = stationFilter === 'all' ? kitchenOrders : kitchenOrders.filter((o) => o.station === stationFilter);
 
   const stats = {
-    waiting: orders.filter((o) => o.status === 'New').length,
-    preparing: orders.filter((o) => o.status === 'Preparing').length,
-    ready: orders.filter((o) => o.status === 'Ready').length,
-    delayed: orders.filter((o) => o.status === 'Delayed' || (o.status === 'Preparing' && o.elapsedMin > 30)).length,
+    waiting: kitchenOrders.filter((o) => o.status === 'New').length,
+    preparing: kitchenOrders.filter((o) => o.status === 'Preparing').length,
+    ready: kitchenOrders.filter((o) => o.status === 'Ready').length,
+    delayed: kitchenOrders.filter((o) => o.status === 'Delayed' || (o.status === 'Preparing' && o.elapsedMin > 30)).length,
   };
 
   const avgPrepTime = '18 min';
-
   const stations: (KitchenStation | 'all')[] = ['all', 'Hot Kitchen', 'Grill', 'Garde Manger', 'Pastry', 'Bar'];
 
   return (
@@ -89,7 +96,7 @@ export default function KitchenPage() {
         title="Kitchen / KDS"
         description="Real-time kitchen display system"
         actions={
-          <Button variant="outline" onClick={recallOrder}>
+          <Button variant="outline" onClick={() => toast.info('Recalling last bumped order…')}>
             <RotateCcw className="mr-2 h-4 w-4" /> Recall
           </Button>
         }
@@ -170,6 +177,9 @@ export default function KitchenPage() {
                                   <span className="ml-1.5">{item.name}</span>
                                   {item.modifiers && item.modifiers.length > 0 && (
                                     <p className="ml-5 text-xs text-muted-foreground">{item.modifiers.join(', ')}</p>
+                                  )}
+                                  {item.notes && (
+                                    <p className="ml-5 text-xs text-accent">Note: {item.notes}</p>
                                   )}
                                 </div>
                               </div>

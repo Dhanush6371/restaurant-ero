@@ -19,29 +19,58 @@ import type {
   SalesRecord,
   Expense,
   Invoice,
+  WaitlistEntry,
+  AuditLogEntry,
+  ServiceMode,
 } from '@/types';
+import { ROLE_PERMISSIONS } from '@/lib/permissions';
 
 export const demoUsers: DemoUser[] = [
-  { id: 'u1', name: 'Antoine Laurent', email: 'admin@maisoneetoile.com', password: 'admin123', role: 'Admin' },
-  { id: 'u2', name: 'Claire Dubois', email: 'manager@maisoneetoile.com', password: 'manager123', role: 'Manager' },
-  { id: 'u3', name: 'Jean Martin', email: 'waiter@maisoneetoile.com', password: 'waiter123', role: 'Waiter' },
-  { id: 'u4', name: 'Louis Bernard', email: 'chef@maisoneetoile.com', password: 'chef123', role: 'Chef' },
+  {
+    id: 'u1', employeeId: 'ADM001', name: 'Antoine Laurent', email: 'admin@maisoneetoile.com',
+    password: 'admin123', role: 'Admin', department: 'Management', phone: '+33 6 12 34 56 78',
+    shift: '10:00 - 22:00', shiftStart: '10:00', shiftEnd: '22:00', section: 'Office',
+    assignedTables: [], status: 'Active', permissions: ROLE_PERMISSIONS.Admin,
+  },
+  {
+    id: 'u2', employeeId: 'MGR001', name: 'Claire Dubois', email: 'manager@maisoneetoile.com',
+    password: 'manager123', role: 'Manager', department: 'Management', phone: '+33 6 23 45 67 89',
+    shift: '11:00 - 22:00', shiftStart: '11:00', shiftEnd: '22:00', section: 'Floor',
+    assignedTables: [], status: 'Active', permissions: ROLE_PERMISSIONS.Manager,
+  },
+  {
+    id: 'u3', employeeId: 'WTR001', name: 'Jean Martin', email: 'waiter@maisoneetoile.com',
+    password: 'waiter123', role: 'Waiter', department: 'Front of House', phone: '+33 6 56 78 90 12',
+    shift: '11:30 - 22:30', shiftStart: '11:30', shiftEnd: '22:30', section: 'Main Dining',
+    assignedTables: [4, 7, 12, 18], status: 'Active', permissions: ROLE_PERMISSIONS.Waiter,
+  },
+  {
+    id: 'u4', employeeId: 'CHF001', name: 'Louis Bernard', email: 'chef@maisoneetoile.com',
+    password: 'chef123', role: 'Chef', department: 'Kitchen', phone: '+33 6 34 56 78 90',
+    shift: '09:00 - 23:00', shiftStart: '09:00', shiftEnd: '23:00', section: 'Kitchen',
+    assignedTables: [], status: 'Active', permissions: ROLE_PERMISSIONS.Chef,
+  },
+  {
+    id: 'u5', employeeId: 'CSH001', name: 'Sophie Moreau', email: 'cashier@maisoneetoile.com',
+    password: 'cashier123', role: 'Cashier', department: 'Front of House', phone: '+33 6 45 67 89 01',
+    shift: '10:00 - 18:00', shiftStart: '10:00', shiftEnd: '18:00', section: 'Front Desk',
+    assignedTables: [], status: 'Active', permissions: ROLE_PERMISSIONS.Cashier,
+  },
 ];
 
-export const rolePermissions: Record<string, string[]> = {
-  Admin: [
-    'dashboard', 'pos', 'tables', 'reservations', 'kitchen', 'waiter',
-    'menu', 'inventory', 'purchasing', 'recipes', 'customers', 'staff',
-    'payments', 'delivery', 'reports', 'accounting', 'settings',
-  ],
-  Manager: [
-    'dashboard', 'pos', 'tables', 'reservations', 'kitchen',
-    'menu', 'inventory', 'purchasing', 'recipes', 'customers', 'staff',
-    'payments', 'delivery', 'reports', 'accounting',
-  ],
-  Waiter: ['dashboard', 'pos', 'tables', 'reservations', 'waiter', 'customers', 'payments'],
-  Chef: ['dashboard', 'kitchen', 'menu', 'inventory', 'recipes'],
-};
+export const initialWaitlist: WaitlistEntry[] = [
+  { id: 'w1', name: 'Marc Dubois', phone: '+33 6 11 22 33 44', guests: 2, estimatedWait: 15, seatingPreference: 'Main Dining', status: 'Waiting', createdAt: '20:15' },
+  { id: 'w2', name: 'Isabelle Roux', phone: '+33 6 22 33 44 55', guests: 4, estimatedWait: 25, seatingPreference: 'Terrace', status: 'Waiting', createdAt: '20:22' },
+];
+
+export const initialAuditLog: AuditLogEntry[] = [
+  { id: 'a1', user: 'Antoine Laurent', action: 'Created user Sophie Moreau', module: 'Settings', time: '2026-08-19 09:15' },
+  { id: 'a2', user: 'Jean Martin', action: 'Created Order #1052', module: 'POS', time: '2026-08-19 19:42' },
+  { id: 'a3', user: 'Louis Bernard', action: 'Marked Steak Frites unavailable', module: 'Menu', time: '2026-08-19 18:30' },
+  { id: 'a4', user: 'Claire Dubois', action: 'Approved refund #R104', module: 'Payments', time: '2026-08-19 17:55' },
+];
+
+export const initialServiceMode: ServiceMode = 'Dinner Service';
 
 const dishImages: Record<string, string> = {
   'Steak Frites': 'https://images.pexels.com/photos/1544539/pexels-photo-1544539.jpeg?auto=compress&cs=tinysrgb&w=400',

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UtensilsCrossed, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { UtensilsCrossed, Loader as Loader2, CircleAlert as AlertCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+
+const demoAccounts = [
+  { label: 'Admin', email: 'admin@maisoneetoile.com', password: 'admin123', name: 'Antoine Laurent' },
+  { label: 'Manager', email: 'manager@maisoneetoile.com', password: 'manager123', name: 'Claire Dubois' },
+  { label: 'Waiter', email: 'waiter@maisoneetoile.com', password: 'waiter123', name: 'Jean Martin' },
+  { label: 'Chef', email: 'chef@maisoneetoile.com', password: 'chef123', name: 'Louis Bernard' },
+  { label: 'Cashier', email: 'cashier@maisoneetoile.com', password: 'cashier123', name: 'Sophie Moreau' },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,9 +55,9 @@ export default function LoginPage() {
     }
   };
 
-  const useDemoAccount = () => {
-    setEmail('admin@maisoneetoile.com');
-    setPassword('admin123');
+  const quickLogin = (acc: typeof demoAccounts[0]) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
   };
 
   const handleForgot = (e: React.FormEvent) => {
@@ -132,7 +140,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@maisoneetoile.com"
+                    placeholder="you@maisoneetoile.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -181,21 +189,31 @@ export default function LoginPage() {
                     'Sign In'
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={useDemoAccount}
-                >
-                  Use Demo Account
-                </Button>
               </form>
+
+              {/* Quick demo accounts */}
+              <div className="mt-6">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Quick demo login
+                </p>
+                <div className="space-y-1.5">
+                  {demoAccounts.map((acc) => (
+                    <button
+                      key={acc.email}
+                      onClick={() => quickLogin(acc)}
+                      className="flex w-full items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{acc.label}</p>
+                        <p className="text-xs text-muted-foreground">{acc.name}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Demo: admin@maisoneetoile.com / admin123
-          </p>
         </div>
       </div>
 

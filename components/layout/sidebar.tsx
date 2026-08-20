@@ -5,13 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
-import { rolePermissions } from '@/lib/mock-data';
-import {
-  LayoutDashboard, Monitor, Armchair, CalendarDays, ChefHat, Smartphone,
-  UtensilsCrossed, Package, ShoppingCart, FileText, Users, UserCog,
-  Truck, CreditCard, BarChart3, Calculator, Settings,
-  HelpCircle, Bell, LogOut, ChevronLeft, Utensils, MapPin,
-} from 'lucide-react';
+import { ROUTE_PERMISSIONS } from '@/lib/permissions';
+import { LayoutDashboard, Monitor, Armchair, CalendarDays, ChefHat, Smartphone, UtensilsCrossed, Package, ShoppingCart, FileText, Users, UserCog, Truck, CreditCard, ChartBar as BarChart3, Calculator, Settings, CircleHelp as HelpCircle, Bell, LogOut, ChevronLeft, Utensils, MapPin } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -22,7 +17,6 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: string;
 }
 
 interface NavSection {
@@ -34,50 +28,50 @@ const navSections: NavSection[] = [
   {
     title: 'Operations',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, key: 'dashboard' },
-      { label: 'POS / Caisse', href: '/pos', icon: Monitor, key: 'pos' },
-      { label: 'Tables', href: '/tables', icon: Armchair, key: 'tables' },
-      { label: 'Reservations', href: '/reservations', icon: CalendarDays, key: 'reservations' },
-      { label: 'Kitchen / KDS', href: '/kitchen', icon: ChefHat, key: 'kitchen' },
-      { label: 'Waiter App', href: '/waiter', icon: Smartphone, key: 'waiter' },
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'POS / Caisse', href: '/pos', icon: Monitor },
+      { label: 'Tables', href: '/tables', icon: Armchair },
+      { label: 'Reservations', href: '/reservations', icon: CalendarDays },
+      { label: 'Kitchen / KDS', href: '/kitchen', icon: ChefHat },
+      { label: 'Waiter App', href: '/waiter', icon: Smartphone },
     ],
   },
   {
     title: 'Menu & Stock',
     items: [
-      { label: 'Menu', href: '/menu', icon: UtensilsCrossed, key: 'menu' },
-      { label: 'Inventory', href: '/inventory', icon: Package, key: 'inventory' },
-      { label: 'Purchasing', href: '/purchasing', icon: ShoppingCart, key: 'purchasing' },
-      { label: 'Recipes & Food Cost', href: '/recipes', icon: FileText, key: 'recipes' },
+      { label: 'Menu', href: '/menu', icon: UtensilsCrossed },
+      { label: 'Inventory', href: '/inventory', icon: Package },
+      { label: 'Purchasing', href: '/purchasing', icon: ShoppingCart },
+      { label: 'Recipes & Food Cost', href: '/recipes', icon: FileText },
     ],
   },
   {
     title: 'Customers & Staff',
     items: [
-      { label: 'Customers / CRM', href: '/customers', icon: Users, key: 'customers' },
-      { label: 'Staff', href: '/staff', icon: UserCog, key: 'staff' },
-      { label: 'Delivery & Takeaway', href: '/delivery', icon: Truck, key: 'delivery' },
+      { label: 'Customers / CRM', href: '/customers', icon: Users },
+      { label: 'Staff', href: '/staff', icon: UserCog },
+      { label: 'Delivery & Takeaway', href: '/delivery', icon: Truck },
     ],
   },
   {
     title: 'Finance',
     items: [
-      { label: 'Payments', href: '/payments', icon: CreditCard, key: 'payments' },
-      { label: 'Reports', href: '/reports', icon: BarChart3, key: 'reports' },
-      { label: 'Accounting', href: '/accounting', icon: Calculator, key: 'accounting' },
+      { label: 'Payments', href: '/payments', icon: CreditCard },
+      { label: 'Reports', href: '/reports', icon: BarChart3 },
+      { label: 'Accounting', href: '/accounting', icon: Calculator },
     ],
   },
   {
     title: 'Admin',
     items: [
-      { label: 'Settings', href: '/settings', icon: Settings, key: 'settings' },
+      { label: 'Settings', href: '/settings', icon: Settings },
     ],
   },
 ];
 
 export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, canAccessRoute } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -87,9 +81,6 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
-
-  const userRole = user?.role || 'Waiter';
-  const allowedKeys = rolePermissions[userRole] || [];
 
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)
@@ -144,9 +135,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
           <div className="space-y-6">
             {navSections.map((section) => {
-              const visibleItems = section.items.filter((item) =>
-                allowedKeys.includes(item.key)
-              );
+              const visibleItems = section.items.filter((item) => canAccessRoute(item.href));
               if (visibleItems.length === 0) return null;
               return (
                 <div key={section.title}>
@@ -161,7 +150,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                       const Icon = item.icon;
                       return (
                         <Link
-                          key={item.key}
+                          key={item.href}
                           href={item.href}
                           className={cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
@@ -225,7 +214,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold">{user?.name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{userRole}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{user?.role}</p>
                 </div>
               )}
             </Link>

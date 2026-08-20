@@ -10,13 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
 import {
   Building2, Monitor, Armchair, ChefHat, Bell, Shield, Palette,
-  Save, Moon, Sun,
+  Save, Moon, Sun, UserPlus, UserX, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
+import { useRestaurant } from '@/lib/restaurant-context';
+import { ROLE_PERMISSIONS, PERMISSION_LABELS, ROLE_LABELS } from '@/lib/permissions';
+import type { UserRole, DemoUser } from '@/types';
 
 const sections = [
   { key: 'restaurant', label: 'Restaurant', icon: Building2 },
@@ -25,24 +30,23 @@ const sections = [
   { key: 'kitchen', label: 'Kitchen', icon: ChefHat },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'permissions', label: 'Users & Permissions', icon: Shield },
+  { key: 'audit', label: 'Audit Log', icon: History },
   { key: 'appearance', label: 'Appearance', icon: Palette },
 ];
 
-const roles = ['Admin', 'Manager', 'Chef', 'Waiter', 'Cashier', 'Inventory Manager'];
-const permissions = ['Dashboard', 'POS', 'Tables', 'Reservations', 'Kitchen', 'Menu', 'Inventory', 'Purchasing', 'Recipes', 'Customers', 'Staff', 'Payments', 'Delivery', 'Reports', 'Accounting', 'Settings'];
-
-const roleMatrix: Record<string, boolean[]> = {
-  Admin: permissions.map(() => true),
-  Manager: permissions.map((p) => p !== 'Settings'),
-  Chef: permissions.map((p) => ['Dashboard', 'Kitchen', 'Menu', 'Inventory', 'Recipes'].includes(p)),
-  Waiter: permissions.map((p) => ['Dashboard', 'POS', 'Tables', 'Reservations', 'Customers', 'Payments'].includes(p)),
-  Cashier: permissions.map((p) => ['Dashboard', 'POS', 'Payments'].includes(p)),
-  'Inventory Manager': permissions.map((p) => ['Dashboard', 'Inventory', 'Purchasing'].includes(p)),
-};
+const roles: UserRole[] = ['Admin', 'Manager', 'Chef', 'Waiter', 'Cashier'];
+const permKeys = Object.keys(PERMISSION_LABELS) as (keyof typeof PERMISSION_LABELS)[];
 
 export default function SettingsPage() {
+  const { user, allUsers, addUser, deactivateUser, activateUser, hasPermission } = useAuth();
+  const { auditLog } = useRestaurant();
   const [activeSection, setActiveSection] = useState('restaurant');
   const [darkMode, setDarkMode] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '', email: '', phone: '', employeeId: '', role: 'Waiter' as UserRole,
+    department: 'Front of House', password: '', section: 'Main Dining', assignedTables: '',
+  });
   const [notifSettings, setNotifSettings] = useState({
     reservationAlerts: true,
     lowStockAlerts: true,
@@ -53,6 +57,35 @@ export default function SettingsPage() {
   });
 
   const save = () => toast.success('Settings saved successfully');
+  const canManageUsers = hasPermission('USER_MANAGEMENT');
+
+  const handleAddUser = () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.error('Name, email, and password are required');
+      return;
+    }
+    const u: DemoUser = {
+      id: `u${Date.now()}`,
+      employeeId: newUser.employeeId || `EMP${Date.now().toString().slice(-4)}`,
+      name: newUser.name,
+      email: newUser.email,
+      password: newUser.password,
+      role: newUser.role,
+      department: newUser.department,
+      phone: newUser.phone,
+      shift: '11:00 - 19:00',
+      shiftStart: '11:00',
+      shiftEnd: '19:00',
+      section: newUser.section,
+      assignedTables: newUser.assignedTables.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)),
+      status: 'Active',
+      permissions: ROLE_PERMISSIONS[newUser.role],
+    };
+    addUser(u);
+    toast.success(`Employee ${u.name} created successfully`);
+    setShowAddUser(false);
+    setNewUser({ name: '', email: '', phone: '', employeeId: '', role: 'Waiter', department: 'Front of House', password: '', section: 'Main Dining', assignedTables: '' });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -301,41 +334,190 @@ export default function SettingsPage() {
           )}
 
           {activeSection === 'permissions' && (
-            <Card className="border-border/60">
-              <CardHeader><CardTitle className="text-base">Role Management & Permission Matrix</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {roles.map((r) => (
-                    <Badge key={r} variant="secondary" className="px-3 py-1">{r}</Badge>
-                  ))}
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="p-2 text-left font-medium text-muted-foreground">Permission</th>
-                        {roles.map((r) => (
-                          <th key={r} className="p-2 text-center font-medium text-muted-foreground whitespace-nowrap">{r}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {permissions.map((perm, pi) => (
-                        <tr key={perm} className="border-b border-border/40">
-                          <td className="p-2 font-medium">{perm}</td>
-                          {roles.map((r) => (
-                            <td key={r} className="p-2 text-center">
-                              {roleMatrix[r]?.[pi] ? (
-                                <span className="inline-block h-2 w-2 rounded-full bg-success" />
+            <div className="space-y-4">
+              {/* User list */}
+              <Card className="border-border/60">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-base">Employees & Permissions</CardTitle>
+                  {canManageUsers && (
+                    <Button size="sm" onClick={() => setShowAddUser(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Add Employee
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Employee ID</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Login</TableHead>
+                        {canManageUsers && <TableHead>Actions</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allUsers.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{u.name}</p>
+                              <p className="text-xs text-muted-foreground">{u.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
+                          <TableCell>{u.department}</TableCell>
+                          <TableCell className="text-sm">{u.employeeId}</TableCell>
+                          <TableCell>
+                            {u.status === 'Active' ? (
+                              <Badge className="bg-success/10 text-success border-success/20">Active</Badge>
+                            ) : (
+                              <Badge className="bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {u.lastLogin ? new Date(u.lastLogin).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                          </TableCell>
+                          {canManageUsers && (
+                            <TableCell>
+                              {u.status === 'Active' ? (
+                                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { deactivateUser(u.id); toast.success(`${u.name} deactivated`); }}>
+                                  <UserX className="mr-1 h-3.5 w-3.5" /> Deactivate
+                                </Button>
                               ) : (
-                                <span className="inline-block h-2 w-2 rounded-full bg-muted" />
+                                <Button size="sm" variant="ghost" className="text-success" onClick={() => { activateUser(u.id); toast.success(`${u.name} activated`); }}>
+                                  Activate
+                                </Button>
                               )}
-                            </td>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Permission matrix */}
+              <Card className="border-border/60">
+                <CardHeader><CardTitle className="text-base">Role Permission Matrix</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="p-2 text-left font-medium text-muted-foreground">Permission</th>
+                          {roles.map((r) => (
+                            <th key={r} className="p-2 text-center font-medium text-muted-foreground whitespace-nowrap">{ROLE_LABELS[r]}</th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {permKeys.map((perm) => (
+                          <tr key={perm} className="border-b border-border/40">
+                            <td className="p-2 font-medium">{PERMISSION_LABELS[perm]}</td>
+                            {roles.map((r) => (
+                              <td key={r} className="p-2 text-center">
+                                {ROLE_PERMISSIONS[r].includes(perm) ? (
+                                  <span className="inline-block h-2 w-2 rounded-full bg-success" />
+                                ) : (
+                                  <span className="inline-block h-2 w-2 rounded-full bg-muted" />
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeSection === 'audit' && (
+            <Card className="border-border/60">
+              <CardHeader><CardTitle className="text-base">Audit Log</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Module</TableHead>
+                      <TableHead className="text-right">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {auditLog.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">{entry.user}</TableCell>
+                        <TableCell>{entry.action}</TableCell>
+                        <TableCell><Badge variant="secondary">{entry.module}</Badge></TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{entry.time}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Add user dialog */}
+          {showAddUser && (
+            <Card className="border-border/60">
+              <CardHeader><CardTitle className="text-base">Add New Employee</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 block">Name</Label>
+                    <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="Jean Martin" />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Email</Label>
+                    <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="waiter@maisoneetoile.com" />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 block">Phone</Label>
+                    <Input value={newUser.phone} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} placeholder="+33 6 12 34 56 78" />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Employee ID</Label>
+                    <Input value={newUser.employeeId} onChange={(e) => setNewUser({ ...newUser, employeeId: e.target.value })} placeholder="WTR002" />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 block">Role</Label>
+                    <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as UserRole })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Department</Label>
+                    <Input value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })} placeholder="Front of House" />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 block">Password</Label>
+                    <Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="password123" />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Assigned Tables (comma-separated)</Label>
+                    <Input value={newUser.assignedTables} onChange={(e) => setNewUser({ ...newUser, assignedTables: e.target.value })} placeholder="4, 7, 12, 18" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowAddUser(false)}>Cancel</Button>
+                  <Button onClick={handleAddUser}>Create Employee</Button>
                 </div>
               </CardContent>
             </Card>

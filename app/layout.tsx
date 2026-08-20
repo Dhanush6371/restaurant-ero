@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Fraunces } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
+import { RestaurantProvider } from '@/lib/restaurant-context';
 import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -25,8 +26,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="font-sans antialiased">
-        <AuthProvider>{children}</AuthProvider>
-        <Toaster />
+        <AuthProvider>
+          <RestaurantProvider>
+            {children}
+            <Toaster />
+          </RestaurantProvider>
+        </AuthProvider>
       </body>
     </html>
   );

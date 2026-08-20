@@ -11,8 +11,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { menuItems, modifiers } from '@/lib/mock-data';
-import type { MenuItem, MenuCategory, OrderItem } from '@/types';
+import { modifiers } from '@/lib/mock-data';
+import { useRestaurant } from '@/lib/restaurant-context';
+import { useAuth } from '@/lib/auth-context';
+import { generateOrderId, generatePaymentId } from '@/lib/restaurant-context';
+import type { MenuItem, MenuCategory, OrderItem, Order, Payment } from '@/types';
 import {
   Search, Plus, Minus, X, UtensilsCrossed, Clock, Send, Printer,
   Pause, CreditCard, Wallet, Banknote, Smartphone, Split,
@@ -22,6 +25,8 @@ import { toast } from 'sonner';
 const categories: MenuCategory[] = ['Entrées', 'Plats', 'Desserts', 'Fromage', 'Wine', 'Drinks', 'Cocktails', 'Specials'];
 
 export default function PosPage() {
+  const { menuItems, sendOrderToKitchen, addPayment, updateTableStatus, addAuditLog, addNotification } = useRestaurant();
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('Plats');
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([
@@ -72,6 +77,27 @@ export default function PosPage() {
   const total = subtotal + vat + service - discount;
 
   const sendToKitchen = () => {
+    const order: Order = {
+      id: generateOrderId(),
+      table: tableNumber,
+      waiter: user?.name?.split(' ')[0] || 'Waiter',
+      waiterId: user?.id,
+      guests,
+      items: cart,
+      status: 'Sent to Kitchen',
+      channel: 'Dine-in',
+      priority: 'Normal',
+      station: 'Hot Kitchen',
+      amount: subtotal,
+      createdAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      elapsedMin: 0,
+    };
+    sendOrderToKitchen(order);
+    addNotification({
+      id: '', type: 'kitchen', title: 'Kitchen', message: `Order for Table ${tableNumber} sent to kitchen.`,
+      time: 'Just now', read: false, link: '/kitchen',
+    });
+    addAuditLog({ user: user?.name || 'Unknown', action: `Sent order to kitchen for Table ${tableNumber}`, module: 'POS' });
     toast.success(`Order sent to kitchen for Table ${tableNumber}`);
     setCart([]);
   };
@@ -85,6 +111,21 @@ export default function PosPage() {
   };
 
   const processPayment = () => {
+    const payment: Payment = {
+      id: generatePaymentId(),
+      transactionId: `P${Math.floor(Math.random() * 9000) + 1000}`,
+      order: `#${generateOrderId()}`,
+      table: tableNumber,
+      amount: total,
+      method: payMethod as Payment['method'],
+      tip: 0,
+      status: 'Completed',
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      waiter: user?.name?.split(' ')[0],
+    };
+    addPayment(payment);
+    updateTableStatus(tableNumber, 'Cleaning');
+    addAuditLog({ user: user?.name || 'Unknown', action: `Processed payment €${total.toFixed(2)} for Table ${tableNumber}`, module: 'POS' });
     toast.success(`Payment processed: €${total.toFixed(2)} via ${payMethod}`);
     setPayOpen(false);
     setPayMethod('');

@@ -1,21 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { useRestaurant } from '@/lib/restaurant-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import {
   Search, Bell, Menu, ChevronDown, Settings, LogOut, User as UserIcon,
   Circle, Calendar,
 } from 'lucide-react';
-import { notifications as defaultNotifications, menuItems, customers, reservations, employees, inventoryItems, suppliers } from '@/lib/mock-data';
+import { menuItems, customers, reservations, employees, inventoryItems, suppliers } from '@/lib/mock-data';
 
 const pageTitles: Record<string, { title: string; breadcrumb: string }> = {
   '/dashboard': { title: 'Dashboard', breadcrumb: 'Home · Dashboard' },
@@ -46,15 +46,15 @@ interface SearchResult {
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { notifications, markNotificationRead, serviceMode } = useRestaurant();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifList, setNotifList] = useState(defaultNotifications);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/dashboard';
   const pageMeta = pageTitles[pathname] || { title: 'Dashboard', breadcrumb: 'Home' };
 
   const initials = user?.name
@@ -103,15 +103,16 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
     return acc;
   }, {});
 
-  const unreadCount = notifList.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleNotifClick = (link: string) => {
+  const handleNotifClick = (id: string, link: string) => {
+    markNotificationRead(id);
     setNotifOpen(false);
     router.push(link);
   };
 
   const markAllRead = () => {
-    setNotifList(notifList.map(n => ({ ...n, read: true })));
+    notifications.forEach(n => !n.read && markNotificationRead(n.id));
   };
 
   return (
@@ -127,6 +128,12 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="min-w-0 flex-1">
         <h1 className="font-serif text-lg font-semibold leading-tight">{pageMeta.title}</h1>
         <p className="hidden text-xs text-muted-foreground sm:block">{pageMeta.breadcrumb}</p>
+      </div>
+
+      {/* Service mode badge */}
+      <div className="hidden items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent md:flex">
+        <Circle className="h-2 w-2 fill-accent text-accent" />
+        {serviceMode}
       </div>
 
       {/* Global search */}
@@ -202,26 +209,32 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
-              <button onClick={markAllRead} className="text-xs text-muted-foreground hover:text-foreground">
-                Mark all read
-              </button>
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-xs text-muted-foreground hover:text-foreground">
+                  Mark all read
+                </button>
+              )}
             </div>
             <div className="max-h-96 overflow-y-auto scrollbar-thin">
-              {notifList.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleNotifClick(n.link)}
-                  className="flex w-full gap-3 border-b border-border/50 px-4 py-3 text-left hover:bg-muted transition-colors"
-                >
-                  {!n.read && <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />}
-                  {n.read && <div className="mt-1.5 h-2 w-2 shrink-0" />}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-muted-foreground">{n.message}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground/60">{n.time}</p>
-                  </div>
-                </button>
-              ))}
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => handleNotifClick(n.id, n.link)}
+                    className="flex w-full gap-3 border-b border-border/50 px-4 py-3 text-left hover:bg-muted transition-colors"
+                  >
+                    {!n.read && <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />}
+                    {n.read && <div className="mt-1.5 h-2 w-2 shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{n.title}</p>
+                      <p className="text-xs text-muted-foreground">{n.message}</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground/60">{n.time}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -247,6 +260,9 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="px-2 py-1.5">
             <p className="text-sm font-medium">{user?.name}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
+            {user?.employeeId && (
+              <p className="mt-1 text-xs text-muted-foreground">ID: {user.employeeId}</p>
+            )}
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push('/settings')}>
